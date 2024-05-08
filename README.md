@@ -27,13 +27,11 @@ Wi-Fi : utilise le Wi-Fi intégré du Raspberry Pi Pico W pour toutes les commun
 
 
 ### Block diagram
-TODO
-<!-- Make sure the path to the picture is correct -->
-![Block Diagram](schematics/block_diagram.png)
+![Block Diagram](img/block_diagram.png)
 
 ### Schematic
 TODO
-![Schematic](schematics/kicad_schematic.png)
+![Schematic](img/kicad_schematic.png)
 
 ### Components
 | Device | Usage | Price |
