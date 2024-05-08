@@ -6,10 +6,26 @@
 
 ## Description
 Ce projet vise à créer un authentificateur de visage à l'aide d'un réseau neuronal afin d'authentifier les utilisateurs enregistrés. Le visage sera scanné à l'aide d'un module caméra, puis il sera sérialisé et envoyé au modèle qui renverra la réponse. La réponse sera diffusée par le module de haut-parleur.
+
 ## Motivation
 La motivation première de ce projet est ma passion pour le ML. Ce projet me permet de travailler avec du ML embarqué et me permet de devenir un meilleur ingénieur. 
+
 ## Architecture
-TODO
+### Déroulement du fonctionnement du système
+
+Initialisation : Le système initialise la caméra, l'écran LCD et les autres périphériques au démarrage.
+Interaction de l'utilisateur : L'utilisateur appuie sur le bouton pour lancer le processus d'authentification.
+Capture d'image : L'appareil photo prend une photo du visage de l'utilisateur immédiatement après avoir appuyé sur le bouton.
+Traitement de l'image : L'image est prétraitée (par exemple, redimensionnement, normalisation) pour répondre aux exigences d'entrée du réseau neuronal.
+Reconnaissance faciale : L'image traitée est introduite dans le réseau neuronal, qui détermine si le visage correspond à une identité connue.
+Réponse de sortie : Basée sur la sortie du réseau neuronal :
+    En cas de reconnaissance (correspondance positive), l'écran LCD affiche un message de réussite et le buzzer émet un son positif.
+    S'il n'est pas reconnu (correspondance négative), l'écran LCD affiche un message d'échec et le buzzer émet un son négatif.
+
+### Connectivité
+Wi-Fi : utilise le Wi-Fi intégré du Raspberry Pi Pico W pour toutes les communications réseau nécessaires, telles que l'envoi de données à un serveur pour traitement ou la réception de mises à jour du modèle de réseau neuronal.
+
+
 ### Block diagram
 TODO
 <!-- Make sure the path to the picture is correct -->
@@ -58,3 +74,5 @@ TODO
 [Article 1](https://www.explainthatstuff.com/induction-motors.html)
 
 [Link title](https://projecthub.arduino.cc/)
+
+https://docs.arducam.com/#6-person-detection
