@@ -30,8 +30,7 @@ Wi-Fi : utilise le Wi-Fi intégré du Raspberry Pi Pico W pour toutes les commun
 ![Block Diagram](img/block_diagram.png)
 
 ### Schematic
-TODO
-![Schematic](img/kicad_schematic.png)
+![Schematic](img/schematic.png)
 
 ### Components
 | Device | Usage | Price |
@@ -42,6 +41,7 @@ TODO
 | Push Button | Button | [1 RON](https://www.optimusdigital.ro/ro/butoane-i-comutatoare/1119-buton-6x6x6.html?search_query=buton&results=222) |
 | Jumper Wires | Connecting components | [7 RON](https://www.optimusdigital.ro/ro/fire-fire-mufate/884-set-fire-tata-tata-40p-10-cm.html?search_query=set+fire&results=110) |
 | Breadboard | Project board | [10 RON](https://www.optimusdigital.ro/ro/prototipare-breadboard-uri/8-breadboard-830-points.html?search_query=breadboard&results=145) |
+| Camera | Used to take images | [19.99 RON](https://www.optimusdigital.ro/en/cameras/11097-ov2640-camera.html)
 
 ### Libraries
 TODO
@@ -51,13 +51,14 @@ TODO
 |---------|-------------|-------|
 | [lib-name1](link-to-lib) | official description of the lib | Used for accesing the peripherals of the microcontroller  |
 | [lib-name2](link-to-lib) | official description of the lib | Used for accesing the peripherals of the microcontroller  |
+| [PyTorch](https://pytorch.org/) |  |
 
 ## Log
 
 <!-- write every week your progress here -->
-
+Wrote first iteration of the documentation.
 ### Week 6 - 12 May
-
+Completed schematic, added components. Updated face recognition model.
 ### Week 7 - 19 May
 
 ### Week 20 - 26 May
