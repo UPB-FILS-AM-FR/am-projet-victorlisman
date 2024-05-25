@@ -44,14 +44,14 @@ Wi-Fi : utilise le Wi-Fi intégré du Raspberry Pi Pico W pour toutes les commun
 | Camera | Used to take images | [19.99 RON](https://www.optimusdigital.ro/en/cameras/11097-ov2640-camera.html)
 
 ### Libraries
-TODO
 <!-- This is just an example, fill in the table with your actual components -->
 
 | Library | Description | Usage |
 |---------|-------------|-------|
-| [lib-name1](link-to-lib) | official description of the lib | Used for accesing the peripherals of the microcontroller  |
-| [lib-name2](link-to-lib) | official description of the lib | Used for accesing the peripherals of the microcontroller  |
-| [PyTorch](https://pytorch.org/) |  |
+| [PyTorch](https://pytorch.org/) |  Used for the model
+| [OV7670](https://github.com/adafruit/Adafruit_OV7670) | Libary for using the camera
+| [ST7735](https://github.com/adafruit/Adafruit-ST7735-Library) | Used for accesing the LCD
+
 
 ## Log
 
