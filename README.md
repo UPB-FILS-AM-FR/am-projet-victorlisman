@@ -51,6 +51,12 @@ Wi-Fi : utilise le Wi-Fi intégré du Raspberry Pi Pico W pour toutes les commun
 | [PyTorch](https://pytorch.org/) |  Used for the model
 | [OV7670](https://github.com/adafruit/Adafruit_OV7670) | Libary for using the camera
 | [ST7735](https://github.com/adafruit/Adafruit-ST7735-Library) | Used for accesing the LCD
+| [LittleFS]() | Used to flash the image to the storage of the pico, in case the camera does not work, if it does to save the image captured
+| [Adafruit_GFX]() Used for graphics for the LCD
+| [Wifi]()
+| [WifiClient]()
+| [HTTPClient]()
+| [SPI]()
 
 
 ## Log
