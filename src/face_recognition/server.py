@@ -51,11 +51,7 @@ def predict_image():
         image_tensor = preprocess_image(image)
         confidence, prediction = predict(model, image_tensor)
 
-        if confidence > 0.5:
-            result = {'prediction': class_names[prediction], 'confidence': confidence}
-        else:
-            result = {'prediction': 'Not Recognized'}
-
+        result = {'prediction': class_names[prediction], 'confidence': confidence}
         return jsonify(result)
 
 if __name__ == '__main__':

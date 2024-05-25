@@ -1,100 +1,128 @@
 #include <WiFi.h>
-#include <WiFiMulti.h>
-#include <Wire.h>
+#include <WiFiClient.h>
+#include <HTTPClient.h>
+#include <LittleFS.h>
+#include <Adafruit_GFX.h>              
+#include <Adafruit_ST7735.h>           
 #include <SPI.h>
-#include <ArduinoHttpClient.h>
-#include <OV7670.h>
 
-#ifndef STASSID
-#define STASSID "ak"
-#define STAPSK "aa"
-#endif
+#define TFT_CS      9     
+#define TFT_RST     8
+#define TFT_DC      7
+#define TFT_SCK     10
+#define TFT_MOSI    11
+#define TFT_MISO
+#define BUZZER_PIN  6
 
-const char* ssid = STASSID;
-const char* password = STAPSK;
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCK, TFT_RST);
+int textxoffset = 5;     
+int textyoffset = 7;    
 
-const char* host = "172.23.201.66";  
-const uint16_t port = 5000;           
+int tft_line1 = 0;
 
-WiFiMulti multi;
 
-OV7670 camera;
+const char* ssid = "ssid";
+const char* password = "pass";
+
+const char* serverUrl = "http://192.168.1.100:5000/predict";
+const char* filePath = "data/image.jpg";
+
+WiFiClient client;
+HTTPClient http;
 
 void setup() {
-  Serial.begin(115200);
-  Wire.begin();
-  SPI.begin();
+	Serial.begin(115200);
+	delay(1000); 
+	Serial.println("Starting setup...");
 
-  camera.init();
-  camera.setResolution(Resolution::QVGA_320x240);
-  camera.setColorSpace(ColorSpace::YUV422);
+	tft.initR(INITR_BLACKTAB);                   
+	tft.fillScreen(ST7735_BLACK);                     
+	tft.setRotation(1);                             
+	tft.setTextWrap(false);   
+	tft.fillRect(10, 10, 100, 50, ST7735_RED);
+	tft.setTextColor(ST7735_WHITE);
+	tft.setTextSize(1);
+	tft.setCursor(20, 20);
+	char *responseMessage;
+	responseMessage[0] = "";
 
-  Serial.println();
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+	if (!LittleFS.begin()) {
+		Serial.println("An Error has occurred while mounting LittleFS");
+		return;
+	} else {
+		Serial.println("LittleFS mounted successfully");
+	}
 
-  multi.addAP(ssid, password);
+	Serial.print("Connecting to ");
+	Serial.println(ssid);
+	WiFi.begin(ssid, password);
 
-  if (multi.run() != WL_CONNECTED) {
-    Serial.println("Unable to connect to network, rebooting in 10 seconds...");
-    delay(10000);
-    rp2040.reboot();
-  }
+	while (WiFi.status() != WL_CONNECTED) {
+		delay(500);
+		Serial.print(".");
+	}
+	Serial.println("Connected to WiFi");
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+	if (sendImage(serverUrl, filePath)) {
+		Serial.println("File uploaded and response received successfully");
+
+		if (responseMessage != nullptr) {
+		tft.setCursor(20, 20);
+		tft.print(responseMessage);
+		}
+	} else {
+		Serial.println("File upload failed");
+	}
+
+	digitalWrite(BUZZER_PIN, LOW);
 }
 
 void loop() {
-  Serial.println("Capturing image...");
 
-  camera.startCapture();
-  while (!camera.captureDone()) {
-  }
+}
 
-  const size_t imageSize = camera.getImageSize();
-  uint8_t* imageData = camera.getImageBuffer();
+bool sendImage(const char* serverUrl, const char* filePath) {
+	Serial.println("Opening file...");
+	File imageFile = LittleFS.open(filePath, "r");
+	if (!imageFile) {
+		Serial.println("Failed to open file for reading");
+		return false;
+	}
 
-  Serial.print("Image captured, size: ");
-  Serial.println(imageSize);
+	int fileSize = imageFile.size();
+	Serial.print("File size: ");
+	Serial.println(fileSize);
 
-  Serial.print("Connecting to ");
-  Serial.print(host);
-  Serial.print(':');
-  Serial.println(port);
+	uint8_t* imageData = (uint8_t*)malloc(fileSize);
+	imageFile.read(imageData, fileSize);
+	imageFile.close();
 
-  WiFiClient wifiClient;
-  HttpClient client = HttpClient(wifiClient, host, port);
+	http.begin(client, serverUrl);
+	http.addHeader("Content-Type", "image/jpeg");
 
-  String head = "--randomBoundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"image.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
-  String tail = "\r\n--randomBoundary--\r\n";
+	Serial.println("Sending HTTP POST request...");
+	int httpResponseCode = http.POST(imageData, fileSize);
+	free(imageData);
 
-  int contentLength = head.length() + imageSize + tail.length();
+	if (httpResponseCode > 0) {
+		Serial.print("HTTP Response code: ");
+		Serial.println(httpResponseCode);
 
-  client.beginRequest();
-  client.post("/predict");
-  client.sendHeader("Content-Type", "multipart/form-data; boundary=randomBoundary");
-  client.sendHeader("Content-Length", contentLength);
-  client.beginBody();
-  client.print(head);
-  client.write(imageData, imageSize);
-  client.print(tail);
-  client.endRequest();
+		String response = http.getString();
+		Serial.println("Response from server:");
+		Serial.println(response);
 
-  while (client.available() == 0) {
-    delay(100);
-  }
 
-  Serial.println("Receiving from remote server");
-  while (client.available()) {
-    char ch = static_cast<char>(client.read());
-    Serial.print(ch);
-  }
+		char responseMessage[response.length() + 1];
+		response.toCharArray(responseMessage, response.length() + 1);
+		digitalWrite(BUZZER_PIN, HIGH);
 
-  client.stop();
-
-  delay(300000);
+		http.end();
+		return true;
+	} else {
+		Serial.print("Error code: ");
+		Serial.println(httpResponseCode);
+		http.end();
+		return false;
+	}
 }
