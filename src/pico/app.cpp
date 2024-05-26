@@ -14,6 +14,7 @@
 #define TFT_MOSI    11
 #define TFT_MISO
 #define BUZZER_PIN  6
+#define BUTTON_PIN  17
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCK, TFT_RST);
 int textxoffset = 5;     
@@ -21,8 +22,8 @@ int textyoffset = 7;
 
 int tft_line1 = 0;
 
-const char* ssid = "ssid";
-const char* password = "pass";
+const char* ssid = "BillyNetwork";
+const char* password = "!1Kito03Teo07";
 
 const char* serverUrl = "http://192.168.0.72:5000/predict";
 const char* filePath = "/test.jpg";
@@ -31,6 +32,11 @@ WiFiClient client;
 HTTPClient http;
 
 char responseMessage[512];
+
+unsigned long lastDebounceTime = 0;
+unsigned long debounceDelay = 50;
+int lastButtonState = LOW;
+int buttonState = LOW;
 
 void setup() {
     Serial.begin(115200);
@@ -44,6 +50,10 @@ void setup() {
     tft.setTextColor(ST7735_WHITE);
     tft.setTextSize(1);
     tft.setCursor(20, 20);
+
+    pinMode(BUTTON_PIN, INPUT);
+    pinMode(BUZZER_PIN, OUTPUT);
+    digitalWrite(BUZZER_PIN, LOW);
 
     responseMessage[0] = '\0';
 
@@ -77,12 +87,39 @@ void setup() {
         tft.setCursor(20, 20);
         tft.fillRect(10, 10, 100, 50, ST7735_BLUE);
     }
-
-    digitalWrite(BUZZER_PIN, LOW);
 }
 
 void loop() {
+    int reading = digitalRead(BUTTON_PIN);
 
+    if (reading != lastButtonState) {
+        lastDebounceTime = millis();
+    }
+
+    if ((millis() - lastDebounceTime) > debounceDelay) {
+        if (reading != buttonState) {
+            buttonState = reading;
+
+            if (buttonState == HIGH) {
+                Serial.println("Button pressed, resending image...");
+                if (sendImage(serverUrl, filePath)) {
+                    Serial.println("File uploaded and response received successfully");
+
+                    if (responseMessage[0] != '\0') {
+                        tft.fillRect(10, 10, 100, 50, ST7735_GREEN);
+                        tft.setCursor(20, 20);
+                        tft.print(responseMessage);
+                    }
+                } else {
+                    Serial.println("File upload failed");
+                    tft.setCursor(20, 20);
+                    tft.fillRect(10, 10, 100, 50, ST7735_BLUE);
+                }
+            }
+        }
+    }
+
+    lastButtonState = reading;
 }
 
 bool sendImage(const char* serverUrl, const char* filePath) {
@@ -111,8 +148,6 @@ bool sendImage(const char* serverUrl, const char* filePath) {
     delay(10000);
 
     if (httpResponseCode > 0) {
-
-
         Serial.print("HTTP Response code: ");
         Serial.println(httpResponseCode);
         String response = http.getString();
