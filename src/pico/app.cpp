@@ -5,6 +5,7 @@
 #include <Adafruit_GFX.h>              
 #include <Adafruit_ST7735.h>           
 #include <SPI.h>
+#include <ArduinoJson.h>
 
 #define TFT_CS      9     
 #define TFT_RST     8
@@ -20,61 +21,64 @@ int textyoffset = 7;
 
 int tft_line1 = 0;
 
-
 const char* ssid = "ssid";
 const char* password = "pass";
 
-const char* serverUrl = "http://192.168.1.100:5000/predict";
-const char* filePath = "data/image.jpg";
+const char* serverUrl = "http://192.168.0.72:5000/predict";
+const char* filePath = "/test.jpg";
 
 WiFiClient client;
 HTTPClient http;
 
+char responseMessage[512];
+
 void setup() {
-	Serial.begin(115200);
-	delay(1000); 
-	Serial.println("Starting setup...");
+    Serial.begin(115200);
+    delay(1000); 
+    Serial.println("Starting setup...");
 
-	tft.initR(INITR_BLACKTAB);                   
-	tft.fillScreen(ST7735_BLACK);                     
-	tft.setRotation(1);                             
-	tft.setTextWrap(false);   
-	tft.fillRect(10, 10, 100, 50, ST7735_RED);
-	tft.setTextColor(ST7735_WHITE);
-	tft.setTextSize(1);
-	tft.setCursor(20, 20);
-	char *responseMessage;
-	responseMessage[0] = "";
+    tft.initR(INITR_BLACKTAB);                   
+    tft.fillScreen(ST7735_BLACK);                     
+    tft.setRotation(0);                             
+    tft.setTextWrap(true);   
+    tft.setTextColor(ST7735_WHITE);
+    tft.setTextSize(1);
+    tft.setCursor(20, 20);
 
-	if (!LittleFS.begin()) {
-		Serial.println("An Error has occurred while mounting LittleFS");
-		return;
-	} else {
-		Serial.println("LittleFS mounted successfully");
-	}
+    responseMessage[0] = '\0';
 
-	Serial.print("Connecting to ");
-	Serial.println(ssid);
-	WiFi.begin(ssid, password);
+    if (!LittleFS.begin()) {
+        Serial.println("An Error has occurred while mounting LittleFS");
+        return;
+    } else {
+        Serial.println("LittleFS mounted successfully");
+    }
 
-	while (WiFi.status() != WL_CONNECTED) {
-		delay(500);
-		Serial.print(".");
-	}
-	Serial.println("Connected to WiFi");
+    Serial.print("Connecting to ");
+    Serial.println(ssid);
+    WiFi.begin(ssid, password);
 
-	if (sendImage(serverUrl, filePath)) {
-		Serial.println("File uploaded and response received successfully");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("Connected to WiFi");
 
-		if (responseMessage != nullptr) {
-		tft.setCursor(20, 20);
-		tft.print(responseMessage);
-		}
-	} else {
-		Serial.println("File upload failed");
-	}
+    if (sendImage(serverUrl, filePath)) {
+        Serial.println("File uploaded and response received successfully");
 
-	digitalWrite(BUZZER_PIN, LOW);
+        if (responseMessage[0] != '\0') {
+            tft.fillRect(10, 10, 100, 50, ST7735_GREEN);
+            tft.setCursor(20, 20);
+            tft.print(responseMessage);
+        }
+    } else {
+        Serial.println("File upload failed");
+        tft.setCursor(20, 20);
+        tft.fillRect(10, 10, 100, 50, ST7735_BLUE);
+    }
+
+    digitalWrite(BUZZER_PIN, LOW);
 }
 
 void loop() {
@@ -82,47 +86,76 @@ void loop() {
 }
 
 bool sendImage(const char* serverUrl, const char* filePath) {
-	Serial.println("Opening file...");
-	File imageFile = LittleFS.open(filePath, "r");
-	if (!imageFile) {
-		Serial.println("Failed to open file for reading");
-		return false;
-	}
+    Serial.println("Opening file...");
+    File imageFile = LittleFS.open(filePath, "r");
+    if (!imageFile) {
+        Serial.println("Failed to open file for reading");
+        return false;
+    }
 
-	int fileSize = imageFile.size();
-	Serial.print("File size: ");
-	Serial.println(fileSize);
+    int fileSize = imageFile.size();
+    Serial.print("File size: ");
+    Serial.println(fileSize);
 
-	uint8_t* imageData = (uint8_t*)malloc(fileSize);
-	imageFile.read(imageData, fileSize);
-	imageFile.close();
+    uint8_t* imageData = (uint8_t*)malloc(fileSize);
+    imageFile.read(imageData, fileSize);
+    imageFile.close();
 
-	http.begin(client, serverUrl);
-	http.addHeader("Content-Type", "image/jpeg");
+    http.begin(client, serverUrl);
+    http.addHeader("Content-Type", "image/jpeg");
 
-	Serial.println("Sending HTTP POST request...");
-	int httpResponseCode = http.POST(imageData, fileSize);
-	free(imageData);
+    Serial.println("Sending HTTP POST request...");
+    int httpResponseCode = http.POST(imageData, fileSize);
+    free(imageData);
 
-	if (httpResponseCode > 0) {
-		Serial.print("HTTP Response code: ");
-		Serial.println(httpResponseCode);
+    delay(10000);
 
-		String response = http.getString();
-		Serial.println("Response from server:");
-		Serial.println(response);
+    if (httpResponseCode > 0) {
 
 
-		char responseMessage[response.length() + 1];
-		response.toCharArray(responseMessage, response.length() + 1);
-		digitalWrite(BUZZER_PIN, HIGH);
+        Serial.print("HTTP Response code: ");
+        Serial.println(httpResponseCode);
+        String response = http.getString();
+        Serial.println("Response from server:");
+        Serial.println(response);
 
-		http.end();
-		return true;
-	} else {
-		Serial.print("Error code: ");
-		Serial.println(httpResponseCode);
-		http.end();
-		return false;
-	}
+        Serial.print("Response length: ");
+        Serial.println(response.length());
+
+        if (response.length() == 0) {
+            Serial.println("Received empty response from server.");
+            return false;
+        }
+
+        DynamicJsonDocument doc(1024);
+        DeserializationError error = deserializeJson(doc, response);
+        if (error) {
+            Serial.print("Failed to parse JSON: ");
+            Serial.println(error.c_str());
+            return false;
+        }
+
+        const char* prediction = doc["prediction"];
+        float confidence = doc["confidence"];
+        if (prediction) {
+            if (confidence > 0.5) {
+              snprintf(responseMessage, sizeof(responseMessage), "Prediction: \n %s, \n Confidence: %.2f", prediction, confidence);
+            }
+            else {
+              snprintf(responseMessage, sizeof(responseMessage), "Person not recognized");
+            }
+        } else {
+            Serial.println("No 'prediction' field in JSON response");
+            return false;
+        }
+
+        digitalWrite(BUZZER_PIN, HIGH);
+        http.end();
+        return true;
+    } else {
+        Serial.print("Error code: ");
+        Serial.println(httpResponseCode);
+        http.end();
+        return false;
+    }
 }

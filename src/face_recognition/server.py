@@ -2,8 +2,9 @@ import os
 import torch
 from flask import Flask, request, jsonify
 from torchvision import transforms, models, datasets
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import torch.nn as nn
+import io
 
 app = Flask(__name__)
 
@@ -39,20 +40,27 @@ def predict(model, image_tensor):
 
 @app.route('/predict', methods=['POST'])
 def predict_image():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
+    try:
+        print('Received request: {} {}'.format(request.method, request.url))
 
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
+        byte_array = request.data
+        if not byte_array:
+            return jsonify({'error': 'No data received'}), 400
 
-    if file:
-        image = Image.open(file.stream)
+        image = Image.open(io.BytesIO(byte_array))
         image_tensor = preprocess_image(image)
         confidence, prediction = predict(model, image_tensor)
-
         result = {'prediction': class_names[prediction], 'confidence': confidence}
+        print(result)
         return jsonify(result)
+    except UnidentifiedImageError as e:
+        print("Error: Cannot identify image file. The byte array may be corrupted or not an image.")
+        print(e)
+        return jsonify({'error': 'Cannot identify image file'}), 400
+    except Exception as e:
+        print("An unexpected error occurred.")
+        print(e)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 if __name__ == '__main__':
     data_dir = 'train_data' 
