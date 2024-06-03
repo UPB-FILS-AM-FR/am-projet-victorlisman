@@ -22,8 +22,8 @@ int textyoffset = 7;
 
 int tft_line1 = 0;
 
-const char* ssid = "BillyNetwork";
-const char* password = "!1Kito03Teo07";
+const char* ssid = "pass";
+const char* password = "pass";
 
 const char* serverUrl = "http://192.168.0.72:5000/predict";
 const char* filePath = "/test.jpg";
